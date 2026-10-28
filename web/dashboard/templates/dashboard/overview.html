@@ -1,0 +1,146 @@
+{% extends "dashboard/base.html" %}
+{% load static fmt %}
+{% block title %}Overview · {{ dataset_label }}{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div>
+    <h1>{{ dataset_label }}</h1>
+    <p class="lede">{{ k.payments|num }} payments. The first 48 hours ({{ k.warmup|num }} payments) only build account history and are not scored.</p>
+  </div>
+  <div class="head-actions">{% include "dashboard/_rule.html" %}</div>
+</header>
+
+<section class="strip" style="--cols:5" aria-label="Summary">
+  <div><div class="v">{{ k.scored|num }}</div><div class="l">Payments scored</div></div>
+  <div><div class="v">{{ k.alerts|num }}</div><div class="l">Alerts</div><div class="s">{{ k.alert_rate|pct }} of scored payments</div></div>
+  <div><div class="v high">{{ k.high|num }}</div><div class="l">High risk</div><div class="s">score {{ k.high_threshold|floatformat:0 }} or more</div></div>
+  <div><div class="v">{{ k.amount_in_alerts|inr_short }}</div><div class="l">Money in alerted payments</div></div>
+  <div><div class="v ring">{{ k.rings }}</div><div class="l">Mule rings found</div>{% if k.escalated %}<div class="s">{{ k.escalated }} payments added from rings</div>{% endif %}</div>
+</section>
+
+{% if a.has_labels %}
+<p class="strip-caption">This file has ground-truth labels, so we can check the alerts against what really happened.</p>
+<section class="strip truth-strip" aria-label="Accuracy on this file">
+  <div><div class="v">{{ k.frauds|num }}</div><div class="l">Fraud payments in the file</div></div>
+  <div><div class="v">{% if k.recall is not None %}{{ k.recall|pct }}{% else %}–{% endif %}</div><div class="l">Caught</div><div class="s">{{ k.caught|num }} of {{ k.frauds|num }}</div></div>
+  <div><div class="v">{% if k.precision is not None %}{{ k.precision|pct }}{% else %}–{% endif %}</div><div class="l">Alerts that are real fraud</div></div>
+  <div><div class="v">{{ k.false_alert_rate|pct:2 }}</div><div class="l">Normal payments wrongly flagged</div><div class="s">{{ k.false_alerts|num }} payments</div></div>
+  <div><div class="v">{{ k.missed_amount|inr_short }}</div><div class="l">Fraud money missed</div></div>
+</section>
+{% endif %}
+
+<section class="panel" aria-labelledby="timeline-title">
+  <div class="panel-head">
+    <div>
+      <h2 id="timeline-title">Alerts over time</h2>
+      <p>Alerts in each 6-hour block of the week. The first {{ k.warmup|num }} payments (first 48 hours) only build history, so no alerts appear there.</p>
+    </div>
+    <div class="legend" aria-hidden="true">
+      <span><i class="dot high"></i>High risk</span>
+      <span><i class="dot med"></i>Medium risk</span>
+    </div>
+  </div>
+  <div class="panel-body"><div class="chart-box tall"><canvas id="timeline" role="img" aria-label="Stacked bar chart of high and medium risk alerts per 6-hour block"></canvas></div></div>
+</section>
+
+<div class="grid grid-2" style="margin-top:18px">
+  <section class="panel">
+    <div class="panel-head"><div><h2>Risk breakdown</h2><p>How the {{ k.scored|num }} scored payments were classed.</p></div></div>
+    <div class="panel-body">
+      <ul class="riskbars">
+        {% for r in charts_json.risk %}
+        <li>
+          <div class="rb-top"><span class="badge lv-{{ r.key }}">{{ r.label }}</span><span class="rb-num"><b>{{ r.count|num }}</b> {% if r.key != 'warm' %}<span class="faint">{{ r.share|pct }}</span>{% endif %}</span></div>
+          <div class="rb-track"><i class="rb-{{ r.key }}" style="width:{% if r.key == 'low' or r.key == 'warm' %}{{ r.share|width:1 }}{% else %}{{ r.share|width:0.1 }}{% endif %}%"></i></div>
+        </li>
+        {% endfor %}
+      </ul>
+      <p class="faint" style="font-size:.8rem;margin-top:10px">High and medium bars use a 10× zoomed scale so small counts stay visible.</p>
+    </div>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><div><h2>Alerts by payment type</h2><p>Which kind of payment the alerts came from.</p></div></div>
+    <div class="panel-body"><div class="chart-box"><canvas id="types" role="img" aria-label="Alerts by payment type"></canvas></div></div>
+  </section>
+</div>
+
+<div class="grid grid-main" style="margin-top:18px">
+  <section class="panel">
+    <div class="panel-head">
+      <div><h2>Highest-risk payments</h2><p>Start here. Open a payment to see why it scored high.</p></div>
+      <a class="btn" href="{% url 'alerts' %}">Open alert queue</a>
+    </div>
+    <div class="panel-body" style="padding-top:8px">
+      {% if top_alerts %}
+      <div class="table-wrap">
+        <table class="data compact">
+          <thead><tr><th>Payment</th><th class="num">Amount</th><th>Score</th><th>Main reason</th></tr></thead>
+          <tbody>
+          {% for p in top_alerts %}
+          <tr>
+            <td><a class="mono" href="{% url 'payment' p.id %}">{{ p.id }}</a><div class="faint nowrap" style="font-size:.8rem">{{ p.time|date:"j M, H:i" }}</div></td>
+            <td class="num">{{ p.amount|inr }}</td>
+            <td><span class="score"><span class="score-bar"><i class="{{ p.level|level_class }}" style="width:{{ p.score|floatformat:0 }}%"></i></span><b>{{ p.score|floatformat:0 }}</b></span></td>
+            <td class="muted" style="font-size:.86rem">{{ p.reasons.0|default:"–" }}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty"><h3>No alerts in this file</h3><p>Nothing crossed the alert line. Try the analyst-capacity rule to review the top payments anyway.</p></div>
+      {% endif %}
+    </div>
+  </section>
+
+  <div class="grid" style="align-content:start">
+    <section class="panel">
+      <div class="panel-head">
+        <div><h2>Mule rings</h2><p>Groups of accounts passing alerted money along.</p></div>
+        {% if rings %}<a class="btn" href="{% url 'rings' %}">Inspect</a>{% endif %}
+      </div>
+      <div class="panel-body" style="padding-top:8px">
+        {% if rings %}
+        <table class="data compact">
+          <thead><tr><th>Ring</th><th class="num">Accounts</th><th class="num">Money moved</th></tr></thead>
+          <tbody>
+          {% for r in rings %}
+          <tr><td><a href="{% url 'ring' r.ring %}">Ring {{ r.ring|add:1 }}</a></td><td class="num">{{ r.accounts }}</td><td class="num">{{ r.total_amount|inr_short }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="muted">No rings found. A ring needs 3+ accounts linked by several alerted payments that pass money on within an hour.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    {% if type_rows %}
+    <section class="panel">
+      <div class="panel-head"><div><h2>Caught, by scam type</h2><p>From the labels in this file.</p></div></div>
+      <div class="panel-body" style="padding-top:8px">
+        <table class="data compact">
+          <thead><tr><th>Type</th><th class="num">Caught</th><th class="num">Share</th></tr></thead>
+          <tbody>
+          {% for t in type_rows %}
+          <tr><td>{{ t.type|scam_label }}</td><td class="num">{{ t.caught }} / {{ t.count }}</td><td class="num">{{ t.recall|pct:0 }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% endif %}
+  </div>
+</div>
+
+<div style="margin-top:18px; display:flex; gap:10px; flex-wrap:wrap">
+  <a class="btn" href="{% url 'export' 'alerts' %}">Download alerts (CSV)</a>
+  <a class="btn" href="{% url 'export' 'all' %}">Download all scored payments (CSV)</a>
+</div>
+{{ charts_json|json_script:"chart-data" }}
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'dashboard/vendor/chart.umd.min.js' %}"></script>
+<script src="{% static 'dashboard/js/charts.js' %}"></script>
+<script>UPI.overview();</script>
+{% endblock %}

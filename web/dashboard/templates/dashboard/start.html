@@ -1,0 +1,45 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Load payments · UPI Scam & Mule Detection{% endblock %}
+{% block content %}
+<div class="start-wrap">
+  <section class="start-hero">
+    <h1>Find the scam payments and the mule accounts behind them.</h1>
+    <p>Load a week of UPI payments. Every payment gets a fraud score with its top reasons, and accounts that pass stolen money along are grouped into rings you can inspect.</p>
+  </section>
+
+  <h2 style="margin-bottom:12px">Start with a labelled demo week</h2>
+  <div class="demo-list">
+    {% for d in demos %}
+    <a class="demo" href="{% url 'load_demo' d.slug %}">
+      <h2>{{ d.title }}</h2>
+      <p>{{ d.text }}</p>
+      <span class="go">Open this week</span>
+    </a>
+    {% endfor %}
+  </div>
+
+  <form class="panel upload" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div>
+      <h2>Or upload your own CSV</h2>
+      <p class="muted" style="margin-top:4px">One row per payment. Add <span class="mono">is_fraud</span> and <span class="mono">fraud_type</span> columns if you have them; they are used only to measure accuracy, never to score.</p>
+      <div class="drop" style="margin-top:12px">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" style="color:var(--ink-3);flex:none"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5"/><path d="M9 14h6M9 17h4"/></svg>
+        <input type="file" name="csv" accept=".csv,text/csv" required aria-label="Transaction CSV file">
+      </div>
+      <p class="cols-list">Required columns: <span class="mono">transaction_id, sender_id, receiver_id, amount, transaction_type, transaction_step, sender_old_balance, sender_new_balance, receiver_old_balance, receiver_new_balance, transaction_time, device_id, device_change_flag, new_device_flag</span></p>
+    </div>
+    <button class="btn btn-primary" type="submit">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 20h16"/></svg>
+      Upload and score
+    </button>
+  </form>
+
+  <div class="how">
+    <div><h3>Score</h3><p>31 signals per payment from the sender's own history, the device, and how money moved in the last hour.</p></div>
+    <div><h3>Explain</h3><p>The three signals that pushed each score up, written as plain sentences.</p></div>
+    <div><h3>Connect</h3><p>Alerted payments and quick pass-throughs are linked into mule rings with NetworkX.</p></div>
+    <div><h3>Decide</h3><p>Set the alert line by review cost or by how many payments your team can check.</p></div>
+  </div>
+</div>
+{% endblock %}

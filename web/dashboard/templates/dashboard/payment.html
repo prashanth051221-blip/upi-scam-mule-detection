@@ -1,0 +1,119 @@
+{% extends "dashboard/base.html" %}
+{% load static fmt %}
+{% block title %}{{ p.id }} · {{ dataset_label }}{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div>
+    <p class="faint" style="margin-bottom:6px"><a href="{% url 'alerts' %}">Alert queue</a> / <span class="mono">{{ p.id }}</span></p>
+    <h1>Why this payment {% if p.level == 'Low' or p.level == 'Warm-up' %}was not flagged{% else %}was flagged{% endif %}</h1>
+  </div>
+  <div class="head-actions">
+    <span class="badge {{ p.level|level_class }}" style="font-size:.88rem;padding:5px 12px">{{ p.level }}</span>
+  </div>
+</header>
+
+{% if warmup %}<div class="notice">This payment is in the first 48 hours of the file. Accounts have little history yet, so it is shown but never alerted.</div>{% endif %}
+{% if p.ring is not None %}<div class="notice ring" style="margin-top:10px">Part of <a href="{% url 'ring' p.ring %}" style="color:inherit;font-weight:650;text-decoration:underline">mule ring {{ p.ring|add:1 }}</a>{% if p.escalated %}. The model scored it below the line; it was added because it passes ring money on within an hour.{% else %}.{% endif %}</div>{% endif %}
+
+<section class="panel verdict" style="margin-top:14px">
+  <div class="verdict-main">
+    <div class="faint" style="font-size:.85rem">{{ p.time|date:"l, j F Y, H:i" }} <span class="tag">{{ p.type }}</span></div>
+    <div class="amount-big" style="margin-top:6px">{{ p.amount|inr }}</div>
+    <div class="route">
+      <div class="party"><div class="who">Paid by</div><span class="mono" title="{{ p.sender }}">{{ p.sender }}</span></div>
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+      <div class="party"><div class="who">Paid to</div><span class="mono" title="{{ p.receiver }}">{{ p.receiver }}</span></div>
+    </div>
+    <dl class="facts">
+      <div><dt>Sender balance before</dt><dd>{{ raw.sender_old_balance|inr }}</dd></div>
+      <div><dt>Sender balance after</dt><dd>{{ raw.sender_new_balance|inr }}</dd></div>
+      <div><dt>Receiver balance before</dt><dd>{{ raw.receiver_old_balance|inr }}</dd></div>
+      <div><dt>Device</dt><dd>{% if device_flags.new %}Never used before{% elif device_flags.changed %}Changed since last payment{% else %}Usual device{% endif %}</dd></div>
+    </dl>
+    {% if p.truth %}<p style="margin-top:16px" class="{% if p.is_fraud %}truth-fraud{% else %}truth-normal{% endif %}">Ground truth: {{ p.truth|scam_label }}</p>{% endif %}
+  </div>
+  <aside class="verdict-side" aria-label="Fraud score">
+    <div class="faint" style="font-size:.85rem">Fraud score</div>
+    <div class="score-big">{{ p.score|floatformat:0 }}<small> / 100</small></div>
+    <div class="gauge" aria-hidden="true">
+      <div class="gauge-track">
+        <span class="gauge-th" style="left:{{ a.alert_threshold|width:1 }}%"></span>
+        <span class="gauge-mark" style="left:{{ p.score|floatformat:1 }}%"></span>
+      </div>
+      <div class="gauge-scale"><span>0</span><span>Alert line {{ a.alert_threshold|width:1|floatformat:0 }}</span><span>100</span></div>
+    </div>
+    <h3 style="margin-top:18px">Top reasons</h3>
+    <ul class="why">
+      {% for r in p.reasons %}<li>{{ r }}</li>{% empty %}<li>No signal pushed this score up noticeably.</li>{% endfor %}
+    </ul>
+  </aside>
+</section>
+
+<div class="grid grid-main" style="margin-top:18px">
+  <section class="panel">
+    <div class="panel-head"><div><h2>What moved the score</h2><p>Every payment starts at the model's neutral point ({{ ex.baseline|floatformat:0 }}). Red bars push the score up, green bars pull it down. The ten largest effects are shown.</p></div></div>
+    <div class="panel-body"><div class="chart-box tall"><canvas id="contrib" role="img" aria-label="Contribution of each signal to the fraud score"></canvas></div></div>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><div><h2>Other payments by this sender</h2><p>{{ n_sender|num }} in the file; the nearest in time are shown.</p></div></div>
+    <div class="panel-body" style="padding-top:8px">
+      {% if sender_rows %}
+      <table class="data compact">
+        <thead><tr><th>When</th><th class="num">Amount</th><th>Score</th></tr></thead>
+        <tbody>
+        {% for r in sender_rows %}
+        <tr><td><a href="{% url 'payment' r.id %}">{{ r.time|date:"j M, H:i" }}</a><div class="faint mono" style="font-size:.76rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">→ {{ r.receiver }}</div></td>
+            <td class="num">{{ r.amount|inr }}</td>
+            <td><span class="badge {{ r.level|level_class }}">{{ r.score|floatformat:0 }}</span></td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}<p class="muted">This is the sender's only payment in the file.</p>{% endif %}
+    </div>
+  </section>
+</div>
+
+<section class="panel" style="margin-top:18px">
+  <div class="panel-head"><div><h2>Money coming into the receiver</h2><p>{{ n_receiver|num }} other payments to <span class="mono">{{ p.receiver }}</span>. Many unrelated payers in a short time is a mule pattern.</p></div></div>
+  <div class="panel-body" style="padding-top:8px">
+    {% if receiver_rows %}
+    <div class="table-wrap">
+    <table class="data compact">
+      <thead><tr><th>When</th><th>From</th><th class="num">Amount</th><th>Risk</th>{% if a.has_labels %}<th>Truth</th>{% endif %}</tr></thead>
+      <tbody>
+      {% for r in receiver_rows %}
+      <tr><td><a href="{% url 'payment' r.id %}">{{ r.time|date:"j M, H:i" }}</a></td><td class="mono">{{ r.sender }}</td><td class="num">{{ r.amount|inr }}</td>
+          <td><span class="badge {{ r.level|level_class }}">{{ r.level }}</span></td>
+          {% if a.has_labels %}<td class="{% if r.is_fraud %}truth-fraud{% else %}truth-normal{% endif %}">{{ r.truth|scam_label }}</td>{% endif %}</tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}<p class="muted">No other payments reached this receiver in the file.</p>{% endif %}
+  </div>
+</section>
+
+<section class="panel" style="margin-top:18px">
+  <details>
+    <summary style="padding:16px 18px;cursor:pointer;font-weight:650">All 32 model inputs for this payment</summary>
+    <div class="table-wrap" style="border-top:1px solid var(--rule)">
+      <table class="data compact">
+        <thead><tr><th>Input</th><th class="num">Value</th><th class="num">Effect (points)</th><th>Meaning</th></tr></thead>
+        <tbody>
+        {% for t in ex.table %}
+        <tr><td class="mono">{{ t.name }}</td><td class="num">{{ t.value|dec:3 }}</td>
+            <td class="num" style="color:{% if t.points > 0.05 %}var(--high){% elif t.points < -0.05 %}var(--low){% else %}var(--ink-3){% endif %}">{{ t.points|floatformat:2 }}</td>
+            <td class="muted">{{ t.meaning }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </details>
+</section>
+{{ contrib_json|json_script:"contrib-data" }}
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'dashboard/vendor/chart.umd.min.js' %}"></script>
+<script src="{% static 'dashboard/js/charts.js' %}"></script>
+<script>UPI.payment();</script>
+{% endblock %}

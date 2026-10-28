@@ -1,0 +1,73 @@
+{% load static %}<!doctype html>
+<html lang="en-IN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}UPI Scam & Mule Detection{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'dashboard/css/app.css' %}">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231d4e9e'/%3E%3Cpath d='M9 17l5 5 9-11' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+</head>
+<body>
+<div class="shell">
+  <aside class="rail" aria-label="Main">
+    <a class="brand" href="{% url 'start' %}">
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.2-3 7.4-7 9-4-1.6-7-4.8-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
+      </span>
+      <span>
+        <span class="brand-name">UPI Scam & Mule Detection</span><br>
+        <span class="brand-sub">Investigation console</span>
+      </span>
+    </a>
+
+    {% if dataset_key %}
+    <div class="dataset">
+      <div class="dataset-label">Loaded file</div>
+      <div class="dataset-name">{{ dataset_label }}</div>
+      <a href="{% url 'start' %}">Load a different file</a>
+    </div>
+    {% endif %}
+
+    <nav class="nav">
+      {% if dataset_key %}
+      <a href="{% url 'overview' %}" {% if nav == 'overview' %}aria-current="page"{% endif %}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M5 16l4-5 4 3 6-8"/></svg>
+        Overview
+      </a>
+      <a href="{% url 'alerts' %}" {% if nav == 'alerts' or nav == 'payment' %}aria-current="page"{% endif %}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9L2.6 17.5A2 2 0 004.3 20.5h15.4a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
+        Alert queue
+      </a>
+      <a href="{% url 'rings' %}" {% if nav == 'rings' or nav == 'ring' %}aria-current="page"{% endif %}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="5" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M7.3 11l9.3-4.8M7.3 13l9.3 4.8M19 7.5v9"/></svg>
+        Mule rings
+      </a>
+      <div class="nav-sep" role="presentation"></div>
+      {% endif %}
+      <a href="{% url 'evidence' %}" {% if nav == 'evidence' %}aria-current="page"{% endif %}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6"/><path d="M10 3v6l-5 9a2 2 0 001.7 3h10.6a2 2 0 001.7-3l-5-9V3"/><path d="M7.5 14h9"/></svg>
+        How well it works
+      </a>
+      {% if not dataset_key %}
+      <a href="{% url 'start' %}" {% if nav == 'start' %}aria-current="page"{% endif %}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 20h16"/></svg>
+        Load payments
+      </a>
+      {% endif %}
+    </nav>
+
+    <p class="rail-foot">Trained and tested on simulated UPI payments. Scores support an analyst's decision; they do not make it.</p>
+  </aside>
+
+  <main class="main" id="main">
+    {% if messages %}
+    <ul class="messages" role="alert">
+      {% for m in messages %}<li>{{ m }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

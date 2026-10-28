@@ -1,0 +1,17 @@
+# Render blueprint: one free web service running the Django website.
+# On render.com: New + > Blueprint > pick this GitHub repo > Apply.
+services:
+  - type: web
+    name: upi-scam-mule-detection
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt && python web/manage.py collectstatic --noinput
+    startCommand: cd web && gunicorn upi_site.wsgi:application --workers 1 --threads 4 --timeout 180 --bind 0.0.0.0:$PORT
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.5
+      - key: DJANGO_DEBUG
+        value: "0"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true

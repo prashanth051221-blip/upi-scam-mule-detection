@@ -1,0 +1,112 @@
+{% extends "dashboard/base.html" %}
+{% load fmt %}
+{% block title %}Alert queue · {{ dataset_label }}{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div>
+    <h1>Alert queue</h1>
+    <p class="lede">Highest fraud score first. Each row shows the three signals that pushed the score up. Open a payment to see the full breakdown.</p>
+  </div>
+  <div class="head-actions">{% include "dashboard/_rule.html" %}</div>
+</header>
+
+<section class="panel">
+  <form class="filters" method="get" role="search">
+    <div class="seg" role="group" aria-label="Which payments">
+      <a href="?view=alerts" {% if f.view == 'alerts' %}aria-current="true"{% endif %}>Alerts</a>
+      <a href="?view=scored" {% if f.view == 'scored' %}aria-current="true"{% endif %}>All scored</a>
+      <a href="?view=everything" {% if f.view == 'everything' %}aria-current="true"{% endif %}>Including warm-up</a>
+    </div>
+    <input type="hidden" name="view" value="{{ f.view }}">
+    <label class="field">Risk
+      <select name="level" onchange="this.form.submit()">
+        <option value="">Any</option>
+        <option value="High" {% if f.level == 'High' %}selected{% endif %}>High</option>
+        <option value="Medium" {% if f.level == 'Medium' %}selected{% endif %}>Medium</option>
+        <option value="ring" {% if f.level == 'ring' %}selected{% endif %}>Inside a mule ring</option>
+      </select>
+    </label>
+    <label class="field">Payment type
+      <select name="type" onchange="this.form.submit()">
+        <option value="">Any</option>
+        {% for t in types %}<option value="{{ t }}" {% if f.type == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
+      </select>
+    </label>
+    {% if a.has_labels %}
+    <label class="field">Ground truth
+      <select name="truth" onchange="this.form.submit()">
+        <option value="">Any</option>
+        <option value="fraud" {% if f.truth == 'fraud' %}selected{% endif %}>Fraud</option>
+        <option value="normal" {% if f.truth == 'normal' %}selected{% endif %}>Normal</option>
+      </select>
+    </label>
+    {% endif %}
+    <label class="field">Sort by
+      <select name="sort" onchange="this.form.submit()">
+        <option value="score" {% if f.sort == 'score' %}selected{% endif %}>Fraud score</option>
+        <option value="amount" {% if f.sort == 'amount' %}selected{% endif %}>Amount</option>
+        <option value="time_desc" {% if f.sort == 'time_desc' %}selected{% endif %}>Newest first</option>
+        <option value="time" {% if f.sort == 'time' %}selected{% endif %}>Oldest first</option>
+      </select>
+    </label>
+    <div class="field grow">
+      <label for="q">Search</label>
+      <div class="search-row">
+        <input id="q" type="search" name="q" value="{{ f.q }}" placeholder="Payment ID or UPI ID">
+        <button class="btn" type="submit">Search</button>
+      </div>
+    </div>
+  </form>
+
+  {% if rows %}
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Payment</th>
+          <th>From → to</th>
+          <th class="num">Amount</th>
+          <th>Score</th>
+          <th>Risk</th>
+          <th style="min-width:280px">Why it scored high</th>
+          {% if a.has_labels %}<th>Truth</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+      {% for p in rows %}
+        <tr>
+          <td class="nowrap">
+            <a class="mono" href="{% url 'payment' p.id %}">{{ p.id }}</a>
+            <div class="faint" style="font-size:.8rem">{{ p.time|date:"j M, H:i" }} <span class="tag">{{ p.type }}</span></div>
+          </td>
+          <td><div class="flow"><span class="mono" title="{{ p.sender }}">{{ p.sender }}</span><span class="mono to" title="{{ p.receiver }}">→ {{ p.receiver }}</span></div></td>
+          <td class="num">{{ p.amount|inr }}</td>
+          <td><span class="score"><span class="score-bar"><i class="{{ p.level|level_class }}" style="width:{{ p.score|floatformat:0 }}%"></i></span><b>{{ p.score|floatformat:0 }}</b></span></td>
+          <td>
+            <span class="badge {{ p.level|level_class }}">{{ p.level }}</span>
+            {% if p.ring is not None %}<div style="margin-top:4px"><a href="{% url 'ring' p.ring %}" style="font-size:.8rem;color:var(--ring)">Ring {{ p.ring|add:1 }}</a></div>{% endif %}
+          </td>
+          <td>{% if p.reasons %}<ul class="reasons">{% for r in p.reasons %}<li>{{ r }}</li>{% endfor %}</ul>{% else %}<span class="faint">Not flagged</span>{% endif %}</td>
+          {% if a.has_labels %}<td class="nowrap {% if p.is_fraud %}truth-fraud{% else %}truth-normal{% endif %}">{{ p.truth|scam_label }}</td>{% endif %}
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="table-foot">
+    <span>Showing {{ first|num }}–{{ last|num }} of {{ total|num }} payments, worth {{ amount_total|inr_short }} in total</span>
+    <nav class="pager" aria-label="Pages">
+      <a class="btn" href="?{{ qs }}&page={{ page|add:-1 }}" {% if page <= 1 %}aria-disabled="true"{% endif %}>Previous</a>
+      <span>Page {{ page }} of {{ pages }}</span>
+      <a class="btn" href="?{{ qs }}&page={{ page|add:1 }}" {% if page >= pages %}aria-disabled="true"{% endif %}>Next</a>
+    </nav>
+  </div>
+  {% else %}
+  <div class="empty">
+    <h3>No payments match these filters</h3>
+    <p>Clear the search or pick "All scored" to see every payment.</p>
+    <p style="margin-top:12px"><a class="btn" href="{% url 'alerts' %}">Clear filters</a></p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

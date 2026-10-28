@@ -1,0 +1,99 @@
+{% extends "dashboard/base.html" %}
+{% load static fmt %}
+{% block title %}Mule rings · {{ dataset_label }}{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div>
+    <h1>Mule rings</h1>
+    <p class="lede">Accounts linked by alerted payments and by money passed on within 60 minutes. Switch between the money-flow view and the network view.</p>
+  </div>
+  <div class="head-actions">{% include "dashboard/_rule.html" %}</div>
+</header>
+
+{% if not rings %}
+<section class="panel"><div class="empty">
+  <h3>No mule rings in this file</h3>
+  <p>A ring needs 3 or more accounts joined by several alerted payments that pass money on within an hour. Normal activity should produce none.</p>
+</div></section>
+{% else %}
+<div class="rings-layout">
+  <section class="panel" aria-label="Rings found">
+    <div class="panel-head" style="padding-bottom:12px"><div><h2>{{ rings|length }} ring{{ rings|length|pluralize }} found</h2><p>Largest money flow first.</p></div></div>
+    <nav class="ring-list" style="border-top:1px solid var(--rule)">
+      {% for r in rings %}
+      <a class="ring-item" href="{% url 'ring' r.ring %}" {% if r.ring == sel.ring %}aria-current="page"{% endif %}>
+        <div class="t">Ring {{ r.ring|add:1 }}</div>
+        <div class="m">{{ r.accounts }} accounts, {{ r.payments }} payments, {{ r.total_amount|inr_short }}</div>
+      </a>
+      {% endfor %}
+    </nav>
+  </section>
+
+  <div>
+    <section class="panel">
+      <div class="panel-head">
+        <div><h2>Ring {{ sel.ring|add:1 }}</h2><p>Active {{ sel.first_seen|slice:":16" }} to {{ sel.last_seen|slice:":16" }} ({{ span_hours|floatformat:0 }} hours).</p></div>
+      </div>
+      <div class="ring-stats" style="margin-top:14px">
+        <div><div class="v">{{ sel.accounts }}</div><div class="l">Accounts</div></div>
+        <div><div class="v">{{ sel.total_amount|inr_short }}</div><div class="l">Money moved</div></div>
+        <div><div class="v">{{ sel.victims_or_sources }}</div><div class="l">Money enters from</div></div>
+        <div><div class="v">{{ sel.cash_out_accounts }}</div><div class="l">Cash-out ends</div></div>
+        <div><div class="v">{% if fraud_share is not None %}{{ fraud_share|pct:0 }}{% else %}{{ sel.longest_chain_hops|default:"–" }}{% endif %}</div><div class="l">{% if fraud_share is not None %}Payments truly fraud{% else %}Longest chain (hops){% endif %}</div></div>
+      </div>
+      <div class="graph-tools">
+        <div class="view-toggle" role="group" aria-label="Ring view">
+          <button type="button" data-view="flow" aria-pressed="true">Money flow</button>
+          <button type="button" data-view="network" aria-pressed="false">Network</button>
+        </div>
+        <span id="view-hint">Money moves left to right. Band thickness shows rupees. Hover a band for the amount.</span>
+        <span style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn hidden" type="button" id="net-labels">Show amounts</button>
+          <button class="btn hidden" type="button" id="net-reset">Reset view</button>
+        </span>
+      </div>
+      <div class="sankey-box" id="flow-view"><canvas id="ring-sankey" role="img" aria-label="Money-flow diagram of this ring, from victims through mules to cash-out"></canvas></div>
+      <div class="graph hidden" id="ring-graph" role="img" aria-label="Network graph of the accounts in this ring"></div>
+      <p class="faint hidden" id="flow-note" style="padding:0 18px 10px;font-size:.8rem"></p>
+      <div class="graph-legend">
+        <span><i class="sw src"></i>Money enters (likely victims)</span>
+        <span><i class="sw mule"></i>Mule passing money on</span>
+        <span><i class="sw cash"></i>Cash-out end</span>
+        <span id="legend-net" class="hidden">Solid arrow: alerted payment. Dashed: quick pass-through. Click an account to see only its money path.</span>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-top:18px">
+      <div class="panel-head"><div><h2>Payments in this ring</h2><p>{{ rows|length }} payments in time order, so you can follow the money.</p></div></div>
+      <div style="padding-top:12px">
+        <div class="scroll-table">
+        <table class="data compact">
+          <thead><tr><th>When</th><th>From → to</th><th class="num">Amount</th><th>Risk</th>{% if a.has_labels %}<th>Truth</th>{% endif %}</tr></thead>
+          <tbody>
+          {% for p in rows %}
+          <tr>
+            <td class="nowrap"><a href="{% url 'payment' p.id %}">{{ p.time|date:"j M, H:i" }}</a></td>
+            <td><div class="flow"><span class="mono">{{ p.sender }}</span><span class="mono to">→ {{ p.receiver }}</span></div></td>
+            <td class="num">{{ p.amount|inr }}</td>
+            <td><span class="badge {{ p.level|level_class }}">{{ p.level }}</span></td>
+            {% if a.has_labels %}<td class="nowrap {% if p.is_fraud %}truth-fraud{% else %}truth-normal{% endif %}">{{ p.truth|scam_label }}</td>{% endif %}
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+{{ graph_json|json_script:"graph-data" }}
+{% endif %}
+{% endblock %}
+{% block scripts %}
+{% if rings %}
+<script src="{% static 'dashboard/vendor/chart.umd.min.js' %}"></script>
+<script src="{% static 'dashboard/vendor/chartjs-chart-sankey.min.js' %}"></script>
+<script src="{% static 'dashboard/vendor/vis-network.min.js' %}"></script>
+<script src="{% static 'dashboard/js/ring.js' %}"></script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,132 @@
+{% extends "dashboard/base.html" %}
+{% load static fmt %}
+{% block title %}How well it works · UPI Scam & Mule Detection{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div>
+    <h1>How well it works</h1>
+    <p class="lede">Offline evaluation on a simulated month of UPI payments. Models were trained on days 2–18, thresholds chosen on days 18–23, and everything below is measured on the final week, which no model saw.</p>
+  </div>
+</header>
+
+{% if missing %}
+<section class="panel"><div class="empty"><h3>No results yet</h3><p>Run <span class="mono">python train_and_evaluate.py</span> from the project folder to produce them.</p></div></section>
+{% else %}
+
+<section class="strip" style="--cols:4">
+  <div><div class="v">{{ data.total_rows|num }}</div><div class="l">Simulated payments</div><div class="s">{{ data.test.rows|num }} in the test week</div></div>
+  <div><div class="v">{{ data.test.fraud_rows|num }}</div><div class="l">Fraud payments in the test week</div><div class="s">{{ data.test.fraud_rate|pct }} of payments</div></div>
+  <div><div class="v">{{ expl.top1_agreement|pct:0 }}</div><div class="l">Top reason matches SHAP</div><div class="s">on the {{ expl.n_alerts_checked }} highest alerts</div></div>
+  <div><div class="v">{% if latency %}{{ latency.p50_ms|floatformat:1 }} ms{% else %}–{% endif %}</div><div class="l">To score one payment</div>{% if latency %}<div class="s">99th percentile {{ latency.p99_ms|floatformat:1 }} ms</div>{% endif %}</div>
+</section>
+
+<section class="panel" style="margin-top:18px">
+  <div class="panel-head"><div><h2>Model comparison</h2><p>PR-AUC and the "2% budget" columns compare models fairly: every model gets the same number of alerts.</p></div></div>
+  <div class="panel-body" style="padding-top:8px">
+    <div class="table-wrap">
+    <table class="data compact">
+      <thead><tr><th>Model</th><th class="num">PR-AUC</th><th class="num">Fraud caught at 2% budget</th><th class="num">Alerts that are fraud</th><th class="num">Alerts per day at cost threshold</th></tr></thead>
+      <tbody>
+      {% for r in comp %}
+      <tr {% if 'Hybrid' in r.model %}class="best"{% endif %}>
+        <td>{{ r.model|strip_prefix }}</td>
+        <td class="num">{{ r.pr_auc|dec:3 }}</td>
+        <td class="num">{{ r.budget_recall|pct }}</td>
+        <td class="num">{{ r.budget_precision|pct }}</td>
+        <td class="num">{{ r.cost_alerts_per_day|num }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+</section>
+
+<div class="grid grid-2" style="margin-top:18px">
+  <figure class="panel figure" style="padding:16px">
+    <img src="{% static 'results/pr_curves.png' %}" alt="Precision-recall curves for each model on the test week" loading="lazy">
+    <figcaption>Precision against recall. Higher and further right is better; the original model sits on the floor.</figcaption>
+  </figure>
+  <figure class="panel figure" style="padding:16px">
+    <img src="{% static 'results/ablation.png' %}" alt="PR-AUC as feature groups are added" loading="lazy">
+    <figcaption>Each feature group adds accuracy. Graph money-flow features add the most.</figcaption>
+  </figure>
+</div>
+
+<section class="panel" style="margin-top:18px">
+  <div class="panel-head"><div><h2>What each feature group adds</h2><p>Random Forest recall uses the same 2% alert budget.</p></div></div>
+  <div class="panel-body" style="padding-top:8px">
+    <table class="data compact">
+      <thead><tr><th>Features used</th><th class="num">Count</th><th class="num">Isolation Forest PR-AUC</th><th class="num">Random Forest PR-AUC</th><th class="num">Fraud caught</th><th class="num">Mule hops caught</th></tr></thead>
+      <tbody>
+      {% for r in ab_rows %}
+      <tr><td>{{ r.features }}</td><td class="num">{{ r.n }}</td><td class="num">{{ r.if_pr|dec:3 }}</td><td class="num">{{ r.rf_pr|dec:3 }}</td><td class="num">{{ r.rf_recall|pct }}</td><td class="num">{{ r.mule|pct }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel" style="margin-top:18px">
+  <div class="panel-head"><div><h2>Scam types the model never saw</h2><p>Each type was removed from training, then tested on its own. Same 2% budget for every model.</p></div></div>
+  <div class="panel-body" style="padding-top:8px">
+    <div class="table-wrap">
+    <table class="data compact">
+      <thead><tr><th>Held-out scam</th><th class="num">Payments</th><th class="num">Rules</th><th class="num">Isolation Forest</th><th class="num">Random Forest</th><th class="num">Hybrid</th><th class="num">Hybrid, type seen in training</th></tr></thead>
+      <tbody>
+      {% for r in unseen %}
+      <tr><td>{{ r.held_out_scam|scam_label }}</td><td class="num">{{ r.test_rows }}</td>
+          <td class="num">{{ r|get:"Rules"|pct:0 }}</td><td class="num">{{ r|get:"Isolation Forest"|pct:0 }}</td>
+          <td class="num">{{ r|get:"Random Forest"|pct:0 }}</td><td class="num">{{ r|get:"Hybrid"|pct:0 }}</td>
+          <td class="num">{{ r|get:"Hybrid (type seen in training)"|pct:0 }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <p class="callout" style="margin-top:14px"><strong>Weak point:</strong> recall drops sharply on a scam type missing from training. Isolation Forest alone still catches most unseen SIM swaps, but the hybrid does not keep that strength yet.</p>
+  </div>
+</section>
+
+<div class="grid grid-2" style="margin-top:18px">
+  <section class="panel">
+    <div class="panel-head"><div><h2>Mule-ring escalation</h2><p>Test week. Missed fraud ₹ plus ₹200 per alert reviewed.</p></div></div>
+    <div class="panel-body" style="padding-top:8px">
+      <table class="data compact">
+        <thead><tr><th>Setting</th><th class="num">Frauds caught</th><th class="num">False alerts</th><th class="num">Total cost</th></tr></thead>
+        <tbody>
+        {% for r in rings.table %}
+        <tr><td>{{ r.setting }}</td><td class="num">{{ r.true_frauds }}</td><td class="num">{{ r.false_alerts }}</td><td class="num">{{ r.cost_rupees|inr_short }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      <p class="muted" style="margin-top:12px;font-size:.86rem">{{ rings.rings_found }} rings found, {{ rings.rings_majority_fraud }} mostly fraud, against {{ rings.true_rings_active_in_test }} real rings active that week.</p>
+    </div>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><div><h2>Where to draw the alert line</h2><p>How the assumed review cost moves the threshold.</p></div></div>
+    <div class="panel-body" style="padding-top:8px">
+      <table class="data compact">
+        <thead><tr><th>Review cost</th><th class="num">Alerts per day</th><th class="num">Precision</th><th class="num">Fraud caught</th><th class="num">Money caught</th></tr></thead>
+        <tbody>
+        {% for r in cost %}
+        <tr><td>{{ r.review_cost_rupees|inr }}</td><td class="num">{{ r.alerts_per_day|num }}</td><td class="num">{{ r.precision|pct:0 }}</td><td class="num">{{ r.recall|pct:0 }}</td><td class="num">{{ r.amount_recall|pct:0 }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<section class="panel" style="margin-top:18px">
+  <div class="panel-head"><div><h2>Limits of these results</h2></div></div>
+  <div class="panel-body">
+    <ul class="limits">
+      <li>All data is simulated. Scam patterns follow public descriptions of UPI fraud, but exact numbers depend on simulator assumptions.</li>
+      <li>Fraud is over-represented (about 2% of payments) so models see enough examples. At a real bank's fraud rate, precision would be lower.</li>
+      <li>The first 48 hours of any file lack history and are not scored. A real deployment would keep history in a feature store.</li>
+      <li>Ring detection looks at the whole file, including later payments, so it supports investigation rather than real-time blocking.</li>
+    </ul>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

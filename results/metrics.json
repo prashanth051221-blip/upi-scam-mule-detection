@@ -1,0 +1,464 @@
+{
+  "data": {
+    "train": {
+      "rows": 69992,
+      "fraud_rows": 1405,
+      "fraud_rate": 0.020073722711166992,
+      "days": [
+        2.0004050925925925,
+        17.99978009259259
+      ]
+    },
+    "val": {
+      "rows": 20557,
+      "fraud_rows": 430,
+      "fraud_rate": 0.020917449044121225,
+      "days": [
+        18.000833333333333,
+        22.999479166666664
+      ]
+    },
+    "test": {
+      "rows": 27734,
+      "fraud_rows": 488,
+      "fraud_rate": 0.01759573087185404,
+      "days": [
+        23.000324074074072,
+        29.99846064814815
+      ]
+    },
+    "fraud_type_counts": {
+      "mule_layering": 1511,
+      "screen_share": 233,
+      "fake_refund_call": 226,
+      "qr_scam": 144,
+      "fake_merchant_collect": 115,
+      "sim_swap": 94
+    },
+    "total_rows": 127134
+  },
+  "comparison": [
+    {
+      "model": "0. Original model (Oct 2026, PaySim IF)",
+      "pr_auc": 0.010938893905853642,
+      "roc_auc": 0.24017505051124965,
+      "budget_precision": 0.0034100596760443308,
+      "budget_recall": 0.00819672131147541,
+      "budget_amount_recall": 0.001254448504773964,
+      "cost_precision": 0.01731539266260236,
+      "cost_recall": 0.9836065573770492,
+      "cost_fpr": 0.9998164868237539,
+      "cost_alerts_per_day": 3961.013913443266,
+      "cost_amount_recall": 0.9821713494021562,
+      "cost_rupees": 5681731.55,
+      "saving_vs_no_model": 2032343.5699999994,
+      "threshold_cost": 0.04149237716838927,
+      "threshold_budget": 0.2066841519378467
+    },
+    {
+      "model": "1. Rules (hand-written)",
+      "pr_auc": 0.32173723460029524,
+      "roc_auc": 0.9306659392324697,
+      "budget_precision": 0.4722222222222222,
+      "budget_recall": 0.45286885245901637,
+      "budget_amount_recall": 0.6745269263076608,
+      "cost_precision": 0.1178826895565093,
+      "cost_recall": 0.8442622950819673,
+      "cost_fpr": 0.11315422447331719,
+      "cost_alerts_per_day": 499.39553506310074,
+      "cost_amount_recall": 0.9802590553460931,
+      "cost_rupees": 851283.13,
+      "saving_vs_no_model": 6862791.989999999,
+      "threshold_cost": 0.08322780429732812,
+      "threshold_budget": 1.083005975822132
+    },
+    {
+      "model": "2a. Isolation Forest (no graph)",
+      "pr_auc": 0.09119055061320192,
+      "roc_auc": 0.878441699368113,
+      "budget_precision": 0.11591962905718702,
+      "budget_recall": 0.15368852459016394,
+      "budget_amount_recall": 0.21341791392874054,
+      "cost_precision": 0.057914046121593295,
+      "cost_recall": 0.9057377049180327,
+      "cost_fpr": 0.2638919474418263,
+      "cost_alerts_per_day": 1090.5255289274921,
+      "cost_amount_recall": 0.9576468319380328,
+      "cost_rupees": 1853115.52,
+      "saving_vs_no_model": 5860959.6,
+      "threshold_cost": -0.06409396764226727,
+      "threshold_budget": 0.07116029495478034
+    },
+    {
+      "model": "2b. Isolation Forest (+ graph)",
+      "pr_auc": 0.3996180912867389,
+      "roc_auc": 0.9259628876189376,
+      "budget_precision": 0.412,
+      "budget_recall": 0.42213114754098363,
+      "budget_amount_recall": 0.45704941488824913,
+      "cost_precision": 0.06973808772483434,
+      "cost_recall": 0.9057377049180327,
+      "cost_fpr": 0.21639873742934743,
+      "cost_alerts_per_day": 905.6277256738003,
+      "cost_amount_recall": 0.9500246362651443,
+      "cost_rupees": 1653113.71,
+      "saving_vs_no_model": 6060961.409999999,
+      "threshold_cost": -0.051913767976171865,
+      "threshold_budget": 0.06211032592726008
+    },
+    {
+      "model": "3a. Random Forest (no graph)",
+      "pr_auc": 0.8896519499130782,
+      "roc_auc": 0.9953577183235199,
+      "budget_precision": 0.8627450980392157,
+      "budget_recall": 0.7213114754098361,
+      "budget_amount_recall": 0.8174052730769881,
+      "cost_precision": 0.5368421052631579,
+      "cost_recall": 0.9405737704918032,
+      "cost_fpr": 0.014534243558687513,
+      "cost_alerts_per_day": 122.1697231699431,
+      "cost_amount_recall": 0.9816028988838781,
+      "cost_rupees": 312916.62,
+      "saving_vs_no_model": 7401158.499999999,
+      "threshold_cost": 0.15569733088517976,
+      "threshold_budget": 0.42209793724692996
+    },
+    {
+      "model": "3b. Random Forest (+ graph)",
+      "pr_auc": 0.9576247717500941,
+      "roc_auc": 0.9982141309959169,
+      "budget_precision": 0.9602803738317757,
+      "budget_recall": 0.8422131147540983,
+      "budget_amount_recall": 0.9031549254604614,
+      "cost_precision": 0.5959595959595959,
+      "cost_recall": 0.9672131147540983,
+      "cost_fpr": 0.011744843279747485,
+      "cost_alerts_per_day": 113.16774356794728,
+      "cost_amount_recall": 0.9842863313988574,
+      "cost_rupees": 279616.42,
+      "saving_vs_no_model": 7434458.699999999,
+      "threshold_cost": 0.12169771407194167,
+      "threshold_budget": 0.41487941740328094
+    },
+    {
+      "model": "4. Hybrid (RF + graph + IF score)",
+      "pr_auc": 0.9566972496307868,
+      "roc_auc": 0.9977513243032818,
+      "budget_precision": 0.9567198177676538,
+      "budget_recall": 0.860655737704918,
+      "budget_amount_recall": 0.9090125311094974,
+      "cost_precision": 0.7131782945736435,
+      "cost_recall": 0.9426229508196722,
+      "cost_fpr": 0.006789987521104015,
+      "cost_alerts_per_day": 92.16312449662374,
+      "cost_amount_recall": 0.9755713877466103,
+      "cost_rupees": 317444.15,
+      "saving_vs_no_model": 7396630.969999999,
+      "threshold_cost": 0.17066513750190127,
+      "threshold_budget": 0.40212204306125476
+    }
+  ],
+  "ablation": [
+    {
+      "features": "Amount & context only",
+      "n_features": 8,
+      "model": "Isolation Forest",
+      "pr_auc": 0.06240381339898473,
+      "budget_recall": 0.07991803278688525,
+      "cost_recall": 0.9180327868852459,
+      "cost_precision": 0.053923928743379874,
+      "mule_recall_budget": 0.09836065573770492
+    },
+    {
+      "features": "Amount & context only",
+      "n_features": 8,
+      "model": "Random Forest",
+      "pr_auc": 0.7182155826768979,
+      "budget_recall": 0.6536885245901639,
+      "cost_recall": 0.9118852459016393,
+      "cost_precision": 0.25098702763677383,
+      "mule_recall_budget": 0.7540983606557377
+    },
+    {
+      "features": "+ behaviour & velocity",
+      "n_features": 18,
+      "model": "Isolation Forest",
+      "pr_auc": 0.083240208567494,
+      "budget_recall": 0.13729508196721313,
+      "cost_recall": 0.9405737704918032,
+      "cost_precision": 0.056098753361036424,
+      "mule_recall_budget": 0.15081967213114755
+    },
+    {
+      "features": "+ behaviour & velocity",
+      "n_features": 18,
+      "model": "Random Forest",
+      "pr_auc": 0.8745872673458511,
+      "budget_recall": 0.7131147540983607,
+      "cost_recall": 0.9077868852459017,
+      "cost_precision": 0.589095744680851,
+      "mule_recall_budget": 0.839344262295082
+    },
+    {
+      "features": "+ device",
+      "n_features": 22,
+      "model": "Isolation Forest",
+      "pr_auc": 0.09119055061320192,
+      "budget_recall": 0.15368852459016394,
+      "cost_recall": 0.9057377049180327,
+      "cost_precision": 0.057914046121593295,
+      "mule_recall_budget": 0.14754098360655737
+    },
+    {
+      "features": "+ device",
+      "n_features": 22,
+      "model": "Random Forest",
+      "pr_auc": 0.8896519499130782,
+      "budget_recall": 0.7213114754098361,
+      "cost_recall": 0.9405737704918032,
+      "cost_precision": 0.5368421052631579,
+      "mule_recall_budget": 0.8459016393442623
+    },
+    {
+      "features": "+ graph money-flow",
+      "n_features": 31,
+      "model": "Isolation Forest",
+      "pr_auc": 0.3996180912867389,
+      "budget_recall": 0.42213114754098363,
+      "cost_recall": 0.9057377049180327,
+      "cost_precision": 0.06973808772483434,
+      "mule_recall_budget": 0.6
+    },
+    {
+      "features": "+ graph money-flow",
+      "n_features": 31,
+      "model": "Random Forest",
+      "pr_auc": 0.9576247717500941,
+      "budget_recall": 0.8422131147540983,
+      "cost_recall": 0.9672131147540983,
+      "cost_precision": 0.5959595959595959,
+      "mule_recall_budget": 0.9704918032786886
+    }
+  ],
+  "recall_by_type": [
+    {
+      "model": "1. Rules (hand-written)",
+      "qr_scam": 0.29545454545454547,
+      "fake_refund_call": 0.1956521739130435,
+      "screen_share": 0.5,
+      "sim_swap": 0.42857142857142855,
+      "fake_merchant_collect": 0.09090909090909091,
+      "mule_layering": 0.5344262295081967
+    },
+    {
+      "model": "2b. Isolation Forest (+ graph)",
+      "qr_scam": 0.06818181818181818,
+      "fake_refund_call": 0.021739130434782608,
+      "screen_share": 0.02,
+      "sim_swap": 0.8571428571428571,
+      "fake_merchant_collect": 0.0,
+      "mule_layering": 0.6
+    },
+    {
+      "model": "3a. Random Forest (no graph)",
+      "qr_scam": 0.25,
+      "fake_refund_call": 0.5,
+      "screen_share": 0.58,
+      "sim_swap": 0.5238095238095238,
+      "fake_merchant_collect": 0.9090909090909091,
+      "mule_layering": 0.8459016393442623
+    },
+    {
+      "model": "4. Hybrid (RF + graph + IF score)",
+      "qr_scam": 0.5454545454545454,
+      "fake_refund_call": 0.6304347826086957,
+      "screen_share": 0.68,
+      "sim_swap": 0.7619047619047619,
+      "fake_merchant_collect": 0.9090909090909091,
+      "mule_layering": 0.9737704918032787
+    }
+  ],
+  "unseen_scams": [
+    {
+      "held_out_scam": "qr_scam",
+      "test_rows": 44,
+      "Rules": 0.29545454545454547,
+      "Isolation Forest": 0.045454545454545456,
+      "Random Forest": 0.5,
+      "Hybrid": 0.5681818181818182,
+      "Hybrid (type seen in training)": 0.5454545454545454
+    },
+    {
+      "held_out_scam": "fake_refund_call",
+      "test_rows": 46,
+      "Rules": 0.1956521739130435,
+      "Isolation Forest": 0.043478260869565216,
+      "Random Forest": 0.5652173913043478,
+      "Hybrid": 0.5869565217391305,
+      "Hybrid (type seen in training)": 0.6304347826086957
+    },
+    {
+      "held_out_scam": "screen_share",
+      "test_rows": 50,
+      "Rules": 0.5,
+      "Isolation Forest": 0.02,
+      "Random Forest": 0.62,
+      "Hybrid": 0.68,
+      "Hybrid (type seen in training)": 0.68
+    },
+    {
+      "held_out_scam": "sim_swap",
+      "test_rows": 21,
+      "Rules": 0.42857142857142855,
+      "Isolation Forest": 0.8571428571428571,
+      "Random Forest": 0.19047619047619047,
+      "Hybrid": 0.23809523809523808,
+      "Hybrid (type seen in training)": 0.7619047619047619
+    },
+    {
+      "held_out_scam": "fake_merchant_collect",
+      "test_rows": 22,
+      "Rules": 0.09090909090909091,
+      "Isolation Forest": 0.0,
+      "Random Forest": 0.2727272727272727,
+      "Hybrid": 0.22727272727272727,
+      "Hybrid (type seen in training)": 0.9090909090909091
+    }
+  ],
+  "graph_rings": {
+    "table": [
+      {
+        "setting": "Model alerts only",
+        "alerts": 645,
+        "true_frauds": 460,
+        "false_alerts": 185,
+        "precision": 0.7131782945736435,
+        "recall": 0.9426229508196722,
+        "mule_layering_recall": 0.9901639344262295,
+        "cost_rupees": 317444.15
+      },
+      {
+        "setting": "+ every payment inside a detected ring",
+        "alerts": 691,
+        "true_frauds": 476,
+        "false_alerts": 215,
+        "precision": 0.6888567293777135,
+        "recall": 0.9754098360655737,
+        "mule_layering_recall": 0.9901639344262295,
+        "cost_rupees": 180054.15
+      },
+      {
+        "setting": "+ ring payments that are fast pass-throughs (score \u2265 0.01)",
+        "alerts": 671,
+        "true_frauds": 475,
+        "false_alerts": 196,
+        "precision": 0.7078986587183308,
+        "recall": 0.9733606557377049,
+        "mule_layering_recall": 0.9901639344262295,
+        "cost_rupees": 179054.15
+      }
+    ],
+    "rings_found": 6,
+    "rings_majority_fraud": 6,
+    "ring_payment_purity": 0.918918918918919,
+    "true_rings_active_in_test": 6,
+    "escalation_min_score": 0.01
+  },
+  "cost_sensitivity": [
+    {
+      "review_cost_rupees": 50,
+      "threshold": 0.09544931143868722,
+      "alerts_per_day": 137.17302250660276,
+      "precision": 0.4947916666666667,
+      "recall": 0.9733606557377049,
+      "amount_recall": 0.992652713498595
+    },
+    {
+      "review_cost_rupees": 200,
+      "threshold": 0.17066513750190127,
+      "alerts_per_day": 92.16312449662374,
+      "precision": 0.7131782945736435,
+      "recall": 0.9426229508196722,
+      "amount_recall": 0.9755713877466103
+    },
+    {
+      "review_cost_rupees": 1000,
+      "threshold": 0.181048193598839,
+      "alerts_per_day": 89.01957606418075,
+      "precision": 0.7367576243980738,
+      "recall": 0.9405737704918032,
+      "amount_recall": 0.9743917259130865
+    },
+    {
+      "review_cost_rupees": 5000,
+      "threshold": 0.3109290422019486,
+      "alerts_per_day": 69.01517694863452,
+      "precision": 0.9130434782608695,
+      "recall": 0.9036885245901639,
+      "amount_recall": 0.955232736960954
+    }
+  ],
+  "thresholds": {
+    "alert": 0.17066513750190127,
+    "high": 0.3109290422019486
+  },
+  "explanations": {
+    "n_alerts_checked": 150,
+    "additivity_max_error": 5.551115123125783e-16,
+    "shap_available": true,
+    "top1_agreement": 0.82,
+    "top3_overlap": 0.8355555555555556,
+    "global_importance_top10": {
+      "if_anomaly_score": 0.09,
+      "amount_log": 0.083,
+      "sender_balance_ratio": 0.0763,
+      "receiver_old_balance_log": 0.0607,
+      "minutes_since_sender_inflow_log": 0.0374,
+      "receiver_txn_count_before_log": 0.0248,
+      "is_p2m": 0.0248,
+      "receiver_inflow_24h_log": 0.0242,
+      "sender_inflow_60m_log": 0.0234,
+      "receiver_unique_senders_24h": 0.0216
+    }
+  },
+  "demo_datasets": [
+    {
+      "dataset": "dataset_1_normal_baseline.csv",
+      "rows_scored": 11261,
+      "warmup_rows": 4269,
+      "fraud_rows": 0,
+      "alerts": 161,
+      "false_alert_rate": 0.014297131693455287,
+      "precision": 0.0,
+      "recall": null
+    },
+    {
+      "dataset": "dataset_2_scam_attacks.csv",
+      "rows_scored": 11238,
+      "warmup_rows": 4411,
+      "fraud_rows": 229,
+      "alerts": 404,
+      "false_alert_rate": 0.01607775456444727,
+      "precision": 0.5618811881188119,
+      "recall": 0.9912663755458515
+    },
+    {
+      "dataset": "dataset_3_mule_rings.csv",
+      "rows_scored": 11862,
+      "warmup_rows": 4704,
+      "fraud_rows": 193,
+      "alerts": 376,
+      "false_alert_rate": 0.016453852086725514,
+      "precision": 0.48936170212765956,
+      "recall": 0.9533678756476683
+    }
+  ],
+  "latency": {
+    "n": 2000,
+    "p50_ms": 0.9323365002273931,
+    "p95_ms": 1.2077191995558678,
+    "p99_ms": 1.384782620061742,
+    "alerts": 0,
+    "alerts_true_fraud": 0
+  }
+}
